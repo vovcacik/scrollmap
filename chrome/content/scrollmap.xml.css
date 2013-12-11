@@ -1,0 +1,31 @@
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+@namespace xul url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+/* This stylesheet is applied on all mimicscrollboxes and scrollmaps only. */
+
+/*
+ * Attach mimicscrollbox binding to custom XUL element.
+ * @see http://dxr.mozilla.org/mozilla-central/source/toolkit/content/xul.css#983
+ */
+xul|mimicscrollbox {
+    -moz-binding: url("chrome://scrollmap/content/scrollmap.xml#mimicscrollbox");
+    /* This makes it scrollable! */
+    overflow: hidden;
+}
+
+/* Reset appearence of the scrollbar and all its descendants. */
+*|* {
+    -moz-appearance: none;
+}
+
+xul|thumb {
+    /* Remove thumb embossing. */
+    border: 0;
+    /* Dim everything visible around thumb. */
+    box-shadow: 0px 0px 0px 100vh rgba(0, 0, 0, 0.5);
+    background-color: transparent;
+}
+
+xul|spacer {
+    /* Thumb's box-shadow color + white. */
+    background-color: gray;
+}

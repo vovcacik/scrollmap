@@ -1,0 +1,4 @@
+content    scrollmap    chrome/content/
+
+overlay    chrome://browser/content/browser.xul    chrome://scrollmap/content/scrollmap.xul
+overlay    chrome://global/content/viewSource.xul  chrome://scrollmap/content/scrollmap.xul

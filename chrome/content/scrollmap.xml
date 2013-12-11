@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Unprivileged code. -->
+
+<bindings xmlns="http://www.mozilla.org/xbl"
+          xmlns:xbl="http://www.mozilla.org/xbl"
+          xmlns:html="http://www.w3.org/1999/xhtml"
+          xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+    <!--
+      ** Mimicscrollbox is a scrollbox that is scrolling its content based on progress
+      ** of external scrollbar. The progress is kept in sync through 'curpos' and 'maxpos'
+      ** attributes of the scrollbar. Note that XBL attribute inheritance is nice way
+      ** to keep them synchronized.
+      **
+      ** @see http://dxr.mozilla.org/mozilla-central/source/toolkit/content/widgets/scrollbox.xml
+      -->
+    <binding id="mimicscrollbox" extends="chrome://global/content/bindings/scrollbox.xml#scrollbox">
+        <resources>
+            <stylesheet src="chrome://scrollmap/content/scrollmap.xml.css"/>
+        </resources>
+        <implementation implements="nsIDOMEventListener">
+            <constructor>
+                document.addEventListener("scroll", this);
+            </constructor>
+            <destructor>
+                document.removeEventListener("scroll", this);
+            </destructor>
+
+            <property name="curpos" readonly="true" onget="return this.getAttribute('curpos');"/>
+            <property name="maxpos" readonly="true" onget="return this.getAttribute('maxpos');"/>
+
+            <method name="handleEvent">
+                <parameter name="event"/>
+                <body><![CDATA[
+                    if (event.type === "scroll")
+                        // hidden pixels below bottom edge = 'inverse' progress * hidden pixels in total
+                        this.scrollTop = (this.curpos / this.maxpos) * (this.scrollHeight - this.clientHeight);
+                ]]></body>
+            </method>
+        </implementation>
+    </binding>
+
+    <!--
+      ** Scrollmap is a scrollbar with background image mirroring the document it is supposed to scroll.
+      ** @override scrollbar content
+      ** @see http://dxr.mozilla.org/mozilla-central/source/toolkit/content/widgets/scrollbar.xml
+      -->
+    <binding id="scrollmap" extends="chrome://global/content/bindings/scrollbar.xml#scrollbar">
+        <resources>
+            <stylesheet src="chrome://scrollmap/content/scrollmap.xml.css"/>
+        </resources>
+        <!-- Omits scrollbar buttons, adds scrollmap specific elements. -->
+        <content clickthrough="always">
+            <xul:mimicscrollbox anonid="mimicscrollbox" xbl:inherits="curpos,maxpos">
+                <xul:stack>
+                    <html:canvas anonid="canvas" width="100" style="width:100px;" moz-opaque="true"/>
+                    <xul:slider flex="1" xbl:inherits="disabled,curpos,maxpos,pageincrement,increment,orient,sborient=orient">
+                        <xul:thumb sbattr="scrollbar-thumb" xbl:inherits="orient,sborient=orient,collapsed=disabled" align="center" pack="center"/>
+                    </xul:slider>
+                </xul:stack>
+            </xul:mimicscrollbox>
+            <xul:spacer flex="1"/>
+        </content>
+        <implementation implements="nsIDOMEventListener">
+            <constructor><![CDATA[
+                this._ADDON_ID = "scrollmap@vovcacik.addons.mozilla.org";
+                this._drawTimeoutID = null;
+                this._mutationObserver = new MutationObserver(this._handleMutations.bind(this));
+                this._canvas = document.getAnonymousElementByAttribute(this, "anonid", "canvas");
+                this._mimicscrollbox = document.getAnonymousElementByAttribute(this, "anonid", "mimicscrollbox");
+
+                document.addEventListener("readystatechange", this);
+                document.addEventListener("visibilitychange", this);
+
+                /*
+                 * Bug fix: Firefox crashes when "max-height" CSS property contains "vh" unit
+                 * during binding attachment, so we need to do it from here.
+                 */
+                var scrollmap = this;
+                document.addEventListener("DOMContentLoaded", function onDOMContentLoaded() {
+                    scrollmap._mimicscrollbox.style.maxHeight = "100vh";
+                    document.removeEventListener("DOMContentLoaded", onDOMContentLoaded);
+                });
+            ]]></constructor>
+            <destructor><![CDATA[
+                this._mutationObserver.disconnect();
+                document.removeEventListener("readystatechange", this);
+                document.removeEventListener("visibilitychange", this);
+            ]]></destructor>
+            <!-- nsIDOMEventListener interface. -->
+            <method name="handleEvent">
+                <parameter name="event"/>
+                <body><![CDATA[
+                    switch (event.type) {
+                        case "readystatechange":
+                            switch (document.readyState) {
+                                case "complete":
+                                    this._mutationObserver.observe(document.body, {
+                                        childList: true,
+                                        attributes: true,
+                                        characterData: true,
+                                        subtree: true
+                                    });
+                                case "interactive":
+                                    break; // Continues with 'visibilitychange' case.
+                                default:
+                                    return;
+                            }
+                        case "visibilitychange":
+                            if (!document.hidden)
+                                this._drawWindow();
+                            break;
+                    }
+                ]]></body>
+            </method>
+            <!-- Callback for this._mutationObserver. -->
+            <method name="_handleMutations">
+                <parameter name="mutations"/>
+                <body><![CDATA[
+                    if (!document.hidden)
+                        this._deferDrawWindow(1000);
+                ]]></body>
+            </method>
+            <!--
+              ** Updates the canvas.
+              -->
+            <method name="_drawWindow">
+                <body><![CDATA[
+                    // Drawing window on canvas can be done only from priviledged code.
+                    var e = new Event(this._ADDON_ID + "#_drawWindow", {bubbles: true, cancelable: true});
+                    if (!this._canvas.dispatchEvent(e)) {
+                        // Event cancelled, draw chequer patter instead.
+                        this._drawChequer();
+                    }
+                ]]></body>
+            </method>
+            <!--
+              ** Updates the canvas with specified delay. The call is ignored
+              ** if there is drawing timeout already set.
+              -->
+            <method name="_deferDrawWindow">
+                <parameter name="delay"/>
+                <body><![CDATA[
+                    var scrollmap = this;
+                    delay = delay || 1000;
+
+                    if (!scrollmap._drawTimeoutID) {
+                        scrollmap._drawTimeoutID = window.setTimeout(function() {
+                            scrollmap._drawWindow();
+                            scrollmap._drawTimeoutID = null;
+                        }, delay);
+                    }
+                ]]></body>
+            </method>
+            <!--
+              ** Draw black & white chequer pattern on canvas and resize
+              ** the scrollmap to fit screen.
+              -->
+            <method name="_drawChequer">
+                <body><![CDATA[
+                    var chequer = document.createElement("canvas");
+                    chequer.width = 20;
+                    chequer.height = 20;
+                    var chequerContext = chequer.getContext("2d");
+                    chequerContext.fillStyle = "white";
+                    chequerContext.fillRect(0, 0, 10, 10);
+                    chequerContext.fillRect(10, 10, 10, 10);
+
+                    var canvas = this._canvas;
+                    var context = canvas.getContext("2d");
+
+                    // Resize canvas to viewport height and sync canvas size with its screen size.
+                    canvas.style.height = "100vh";
+                    canvas.width = canvas.clientWidth;
+                    canvas.height = canvas.clientHeight;
+
+                    // Apply the chequer pattern.
+                    var pattern = context.createPattern(chequer, "repeat");
+                    context.save();
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.fillStyle = pattern;
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    context.restore();
+                ]]></body>
+            </method>
+        </implementation>
+    </binding>
+
+</bindings>

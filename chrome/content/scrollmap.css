@@ -1,0 +1,14 @@
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+@namespace xul url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+@namespace html url("http://www.w3.org/1999/xhtml");
+/* This stylesheet is applied on all Firefox windows. */
+
+/*
+ * Rebind the main vertical scrollbar.
+ *
+ * Note that CSS traverse all elements regardless of them being explicit or anonymous (unlike JavaScript).
+ * @see https://developer.mozilla.org/en-US/docs/XBL/XBL_1.0_Reference/Anonymous_Content#Anonymous_Content_and_CSS
+ */
+html|html > xul|scrollbar[orient=vertical] {
+    -moz-binding: url("chrome://scrollmap/content/scrollmap.xml#scrollmap");
+}
