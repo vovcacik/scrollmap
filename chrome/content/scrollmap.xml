@@ -15,9 +15,6 @@
       ** @see http://dxr.mozilla.org/mozilla-central/source/toolkit/content/widgets/scrollbox.xml
       -->
     <binding id="mimicscrollbox" extends="chrome://global/content/bindings/scrollbox.xml#scrollbox">
-        <resources>
-            <stylesheet src="chrome://scrollmap/content/scrollmap.xml.css"/>
-        </resources>
         <implementation implements="nsIDOMEventListener">
             <constructor>
                 document.addEventListener("scroll", this);
