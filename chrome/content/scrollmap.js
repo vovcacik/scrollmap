@@ -36,13 +36,13 @@ var scrollmap = {
      */
     _drawWindow: function(canvas) {
         var doc = canvas.ownerDocument;
-        if (!doc || !doc.body) throw new Error("The owner document for canvas or its body is missing.");
+        if (!doc || !doc.documentElement) throw new Error("The owner document for canvas or its documentElement is missing.");
         var win = doc.defaultView;
         if (!win) throw new Error("The window instance for canvas is missing.");
 
         // Update CSS dimension to match document scale.
-        var scale = canvas.clientWidth / doc.body.scrollWidth;
-        canvas.style.height = Math.ceil(scale * doc.body.scrollHeight) + "px";
+        var scale = canvas.clientWidth / doc.documentElement.scrollWidth;
+        canvas.style.height = Math.ceil(scale * doc.documentElement.scrollHeight) + "px";
 
         // Update XUL dimension to match CSS dimension to avoid distortion on screen.
         canvas.width = canvas.clientWidth;
@@ -52,14 +52,14 @@ var scrollmap = {
         context.save();
 
         // Downscale drawing to fit canvas size without overflow.
-        context.scale(canvas.width / doc.body.scrollWidth,
-                      canvas.height / doc.body.scrollHeight);
+        context.scale(canvas.width / doc.documentElement.scrollWidth,
+                      canvas.height / doc.documentElement.scrollHeight);
 
         /*
          * Draw the window contents to the canvas.
          * @see http://dxr.mozilla.org/mozilla-central/source/dom/interfaces/canvas/nsIDOMCanvasRenderingContext2D.idl
          */
-        context.drawWindow(win, 0, 0, doc.body.scrollWidth, doc.body.scrollHeight, "white");
+        context.drawWindow(win, 0, 0, doc.documentElement.scrollWidth, doc.documentElement.scrollHeight, "white");
 
         context.restore();
     }
