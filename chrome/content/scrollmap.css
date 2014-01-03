@@ -1,7 +1,7 @@
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 @namespace xul url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 @namespace html url("http://www.w3.org/1999/xhtml");
-/* This stylesheet is applied on all Firefox windows. */
+/* This stylesheet has Firefox window as its root. */
 
 /*
  * Rebind the main vertical scrollbar.
