@@ -73,13 +73,21 @@
                 document.addEventListener("visibilitychange", this);
 
                 /*
-                 * Bug fix: Firefox crashes when "max-height" CSS property contains "vh" unit
+                 * Bug workaround:
+                 * Firefox crashes when "max-height" CSS property contains "vh" unit
                  * during binding attachment, so we need to do it from here.
+                 * Firefox also crashes when we set the CSS property on unfocused tab
+                 * too soon.
                  */
                 var scrollmap = this;
                 document.addEventListener("DOMContentLoaded", function onDOMContentLoaded() {
-                    scrollmap._mimicscrollbox.style.maxHeight = "100vh";
+                    if (!document.hidden)
+                        scrollmap._mimicscrollbox.style.maxHeight = "100vh";
                     document.removeEventListener("DOMContentLoaded", onDOMContentLoaded);
+                });
+                window.addEventListener("load", function onload() {
+                    scrollmap._mimicscrollbox.style.maxHeight = "100vh";
+                    window.removeEventListener("load", onload);
                 });
             ]]></constructor>
             <destructor><![CDATA[
